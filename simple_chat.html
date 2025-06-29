@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Calendar Booking Agent - Final Product</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                order: -1;
+            }
+        }
+        .chat-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            margin: 0;
+        }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            min-height: 400px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user-message {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .bot-message {
+            background: #e9ecef;
+            color: #333;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+        }
+        #messageInput:focus {
+            border-color: #007bff;
+        }
+        #sendButton {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        #sendButton:hover {
+            background: #0056b3;
+        }
+        #sendButton:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .slot-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .slot-button {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .slot-button:hover {
+            background: #218838;
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .loading {
+            color: #007bff;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Calendar Booking Agent</h1>
+            <p>Ask me to schedule appointments, check availability, or book meetings!</p>
+        </div>
+        
+        <div id="chatContainer" class="chat-container">
+            <div class="message bot-message">
+                <strong>🤖 Agent:</strong> Hi! I can help you book appointments on your Google Calendar. What would you like to schedule?
+            </div>
+        </div>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center; color: #6c757d;">
+            <small>💡 Try: "I want to schedule a call for tomorrow afternoon" or "Do you have any free time this Friday?"</small>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = 'web_' + Math.random().toString(36).substr(2, 9);
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            input.value = '';
+            
+            // Show loading status
+            setStatus('🤔 Thinking...', 'loading');
+            document.getElementById('sendButton').disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Add bot response to chat
+                addMessage(data.response, 'bot', data.available_slots);
+                
+                setStatus('✅ Ready', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, I encountered an error. Please make sure the backend is running on http://localhost:8000', 'bot');
+                setStatus('❌ Error - Check backend', 'error');
+            }
+            
+            document.getElementById('sendButton').disabled = false;
+        }
+        
+        function addMessage(text, sender, slots = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const prefix = sender === 'user' ? '👤 You:' : '🤖 Agent:';
+            messageDiv.innerHTML = `<strong>${prefix}</strong> ${text}`;
+            
+            // Add slot buttons if available
+            if (slots && slots.length > 0) {
+                const slotsDiv = document.createElement('div');
+                slotsDiv.className = 'slot-buttons';
+                
+                slots.forEach((slot, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'slot-button';
+                    button.textContent = `${index + 1}. ${slot.display}`;
+                    button.onclick = () => selectSlot(index + 1);
+                    slotsDiv.appendChild(button);
+                });
+                
+                messageDiv.appendChild(slotsDiv);
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function selectSlot(slotNumber) {
+            document.getElementById('messageInput').value = slotNumber.toString();
+            sendMessage();
+        }
+        
+        function setStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        // Test backend connection on load
+        window.onload = async function() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    setStatus('🟢 Connected to backend', 'success');
+                } else {
+                    setStatus('🔴 Backend not responding', 'error');
+                }
+            } catch (error) {
+                setStatus('🔴 Cannot connect to backend', 'error');
+            }
+        };
+    </script>
+</body>
+</html>
