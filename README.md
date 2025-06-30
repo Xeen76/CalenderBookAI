@@ -1,3 +1,11 @@
+![Main Page](https://github.com/user-attachments/assets/7459f061-b197-455e-bf69-998f76527011)
+
+
+![Booking confirmed in Gmail](https://github.com/user-attachments/assets/f9817b1b-fd7a-4297-98db-331a6f18a5a4)
+
+
+
+
 # 📅 Calendar Booking Agent
 
 A conversational AI agent that assists users in booking appointments on Google Calendar using FastAPI backend, LangGraph agent framework, and Streamlit frontend.
